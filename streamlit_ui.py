@@ -80,7 +80,7 @@ with col2:
             st.stop()
         
         # ------------------------------------------
-        # [안정화 3단계] 지영님의 YOLO 가동 (로딩 바 레이아웃 분리)
+        # [안정화 3단계] YOLO 가동 (로딩 바 레이아웃 분리)
         # ------------------------------------------
         with st.spinner("🕵️‍♂️ YOLOv8 모델이 이미지에서 동물 영역을 정밀 탐색 중입니다..."):
             yolo_results = yolo_model(input_image, verbose=False)
@@ -101,7 +101,7 @@ with col2:
             st.image(cropped_img.resize((224, 224)), caption="✂️ YOLO 정밀 크롭 완료 (224x224)", width=224)
             
         # ------------------------------------------
-        # [안정화 4단계] 친구분의 CLIP 가동 및 최종 매칭
+        # [안정화 4단계] CLIP 가동 및 최종 매칭
         # ------------------------------------------
         if text_query:
             with st.spinner("🔄 통합 벡터 데이터베이스 내 대용량 특징 행렬 대조 중..."):
@@ -121,7 +121,35 @@ with col2:
                     # [안정화] 매칭 유사도 결과 출력 및 하이라이트 제공
                     st.success("📈 통합 데이터베이스 매칭 성공!")
                     st.metric(label="최고 유사도 일치율", value=f"{match_prob:.2f}%")
-                    st.info(f"📂 매칭된 보호소 파일 경로: \n`{total_paths[max_idx]}`")
+                    
+                    # ==========================================
+                    # 🔥 [추가된 안정화 구역] 결과 이미지 카드 생성 및 태그 에러 방어
+                    # ==========================================
+                    st.markdown("### 🐾 가장 닮은 동물 검색 결과")
+                    
+                    # 매칭된 매칭 데이터를 item 딕셔너리 형태로 가상 래핑 (기존 컴포넌트 호환용)
+                    matched_path = total_paths[max_idx]
+                    
+                    # 만약 태그 구조가 터지는걸 방지하기 위한 안전한 더미 데이터 구조 바인딩
+                    item = {
+                        "image_path": matched_path,
+                        "tags": [("유사 결과", "breed"), (f"{match_prob:.1f}% 일치", "color")]
+                    }
+                    
+                    # 문제의 태그 HTML 파싱 구역 안정화 솔루션 적용
+                    tags_list = []
+                    if "tags" in item and item["tags"]:
+                        for tag in item["tags"]:
+                            if isinstance(tag, (list, tuple)) and len(tag) == 2:
+                                t, cls = tag
+                                tags_list.append(f'<span style="background-color:#e1f5fe; padding:2px 8px; margin-right:5px; border-radius:4px; font-size:14px; color:#0288d1;">#{t}</span>')
+                            elif isinstance(tag, str):
+                                tags_list.append(f'<span style="background-color:#e1f5fe; padding:2px 8px; margin-right:5px; border-radius:4px; font-size:14px; color:#0288d1;">#{tag}</span>')
+                    tags_html = "".join(tags_list)
+                    
+                    # 화면에 보호소 결과 출력 및 태그 표출
+                    st.info(f"📂 매칭된 보호소 데이터 경로: \n`{matched_path}`")
+                    st.markdown(tags_html, unsafe_allow_html=True)
                     
                 except Exception as e:
                     st.error(f"❌ 매칭 연산 중 오류가 발생했습니다: {e}")
